@@ -1,0 +1,92 @@
+{
+  "dataset_samples": 25000,
+  "dataset_seed": 7,
+  "features": [
+    "goal_dx",
+    "goal_dy",
+    "vx",
+    "vy",
+    "repulsion_x",
+    "repulsion_y"
+  ],
+  "sparse_linear": {
+    "action_x": {
+      "r2": 0.7648789882659912,
+      "intercept": -0.1436212270081718,
+      "coefficients": {
+        "goal_dx": 0.15158622044194045,
+        "goal_dy": 0.03726928890151762,
+        "vx": 0.0,
+        "vy": 0.0,
+        "repulsion_x": -5.997695523573568e-07,
+        "repulsion_y": -6.315363035706107e-06
+      },
+      "scaled_intercept": -0.14524389803409576,
+      "scaled_coefficients": {
+        "goal_dx": 0.7885024547576904,
+        "goal_dy": 0.19369295239448547,
+        "vx": 0.0,
+        "vy": 0.0,
+        "repulsion_x": -0.00102039217017591,
+        "repulsion_y": -0.010722244158387184
+      },
+      "active_terms": [
+        {
+          "label": "goal_dx",
+          "coef": 0.15158622044194045
+        },
+        {
+          "label": "goal_dy",
+          "coef": 0.03726928890151762
+        }
+      ],
+      "equation": "action_x = -0.1436 + 0.1516 * goal_dx + 0.0373 * goal_dy"
+    },
+    "action_y": {
+      "r2": 0.643308162689209,
+      "intercept": -0.2777320831415369,
+      "coefficients": {
+        "goal_dx": -0.04158643480869237,
+        "goal_dy": 0.13356564753654046,
+        "vx": -0.020460384747094437,
+        "vy": -0.006551126341083813,
+        "repulsion_x": 0.0,
+        "repulsion_y": 7.250495098999329e-06
+      },
+      "scaled_intercept": -0.2785916328430176,
+      "scaled_coefficients": {
+        "goal_dx": -0.21631917357444763,
+        "goal_dy": 0.6941566467285156,
+        "vx": -0.01770259067416191,
+        "vy": -0.0056630754843354225,
+        "repulsion_x": 0.0,
+        "repulsion_y": 0.012309914454817772
+      },
+      "active_terms": [
+        {
+          "label": "goal_dx",
+          "coef": -0.04158643480869237
+        },
+        {
+          "label": "goal_dy",
+          "coef": 0.13356564753654046
+        },
+        {
+          "label": "vx",
+          "coef": -0.020460384747094437
+        }
+      ],
+      "equation": "action_y = -0.2777 - 0.0416 * goal_dx + 0.1336 * goal_dy - 0.0205 * vx"
+    }
+  },
+  "decision_tree": {
+    "action_x": {
+      "r2": 0.9128612648777086,
+      "rules": "|-- goal_dx <= 0.491\n|  |-- goal_dx <= -0.684\n|  |  |-- goal_dx <= -2.152\n|  |  |  |-- value: [-0.986]\n|  |  |-- goal_dx >  -2.152\n|  |  |  |-- value: [-0.794]\n|  |-- goal_dx >  -0.684\n|  |  |-- goal_dy <= -1.680\n|  |  |  |-- value: [-0.957]\n|  |  |-- goal_dy >  -1.680\n|  |  |  |-- value: [-0.046]\n|-- goal_dx >  0.491\n|  |-- goal_dy <= -4.255\n|  |  |-- goal_dx <= 4.955\n|  |  |  |-- value: [-0.607]\n|  |  |-- goal_dx >  4.955\n|  |  |  |-- value: [0.886]\n|  |-- goal_dy >  -4.255\n|  |  |-- goal_dx <= 1.609\n|  |  |  |-- value: [0.581]\n|  |  |-- goal_dx >  1.609\n|  |  |  |-- value: [0.953]\n"
+    },
+    "action_y": {
+      "r2": 0.9043861810622771,
+      "rules": "|-- goal_dy <= 0.964\n|  |-- goal_dy <= -0.643\n|  |  |-- goal_dy <= -1.232\n|  |  |  |-- value: [-0.995]\n|  |  |-- goal_dy >  -1.232\n|  |  |  |-- value: [-0.816]\n|  |-- goal_dy >  -0.643\n|  |  |-- repulsion_y <= 0.113\n|  |  |  |-- value: [-0.835]\n|  |  |-- repulsion_y >  0.113\n|  |  |  |-- value: [0.023]\n|-- goal_dy >  0.964\n|  |-- goal_dx <= 2.848\n|  |  |-- goal_dx <= 1.847\n|  |  |  |-- value: [0.934]\n|  |  |-- goal_dx >  1.847\n|  |  |  |-- value: [0.443]\n|  |-- goal_dx >  2.848\n|  |  |-- goal_dy <= 6.481\n|  |  |  |-- value: [-0.765]\n|  |  |-- goal_dy >  6.481\n|  |  |  |-- value: [0.897]\n"
+    }
+  }
+}

@@ -1,0 +1,108 @@
+{
+  "candidate": {
+    "family": "exponential",
+    "name": "exp_decay_0.5_thr4.0",
+    "threshold": 4.0,
+    "decay": 0.5
+  },
+  "coefficients": {
+    "x": {
+      "intercept": 0.04291841760277748,
+      "goal": 0.1436748206615448,
+      "velocity": -0.01191827654838562,
+      "repulsion": 0.46304988861083984
+    },
+    "y": {
+      "intercept": -0.06199974566698074,
+      "goal": 0.11338824778795242,
+      "velocity": -0.007114529609680176,
+      "repulsion": 0.650853157043457
+    }
+  },
+  "metrics": {
+    "r2_full": 0.6224469542503357,
+    "r2_x": 0.7026618719100952,
+    "r2_y": 0.5422286987304688,
+    "mae": 0.387319415807724
+  },
+  "sampling": {
+    "n_samples": 30000,
+    "seed": 7
+  },
+  "feature_space": {
+    "goal_terms": [
+      "goal_dx",
+      "goal_dy"
+    ],
+    "damping_terms": [
+      "vx",
+      "vy"
+    ],
+    "repulsion_terms": [
+      "nearest_obstacle_repulsion_x",
+      "nearest_obstacle_repulsion_y"
+    ]
+  },
+  "leaderboard": [
+    {
+      "name": "exp_decay_0.5_thr4.0",
+      "family": "exponential",
+      "r2_full": 0.6224469542503357,
+      "mae": 0.387319415807724
+    },
+    {
+      "name": "exp_decay_0.5_thr3.5",
+      "family": "exponential",
+      "r2_full": 0.6207990050315857,
+      "mae": 0.38938820362091064
+    },
+    {
+      "name": "linear_spring_thr4.0",
+      "family": "linear_spring",
+      "r2_full": 0.6207901835441589,
+      "mae": 0.388940691947937
+    },
+    {
+      "name": "linear_spring_thr3.5",
+      "family": "linear_spring",
+      "r2_full": 0.6192668676376343,
+      "mae": 0.39030298590660095
+    },
+    {
+      "name": "exp_decay_0.5_thr3.0",
+      "family": "exponential",
+      "r2_full": 0.6188743114471436,
+      "mae": 0.3911494016647339
+    },
+    {
+      "name": "quadratic_spring_thr4.0",
+      "family": "quadratic_spring",
+      "r2_full": 0.6180696487426758,
+      "mae": 0.3905714750289917
+    },
+    {
+      "name": "linear_spring_thr3.0",
+      "family": "linear_spring",
+      "r2_full": 0.6176706552505493,
+      "mae": 0.3909711539745331
+    },
+    {
+      "name": "exp_decay_0.5_thr2.5",
+      "family": "exponential",
+      "r2_full": 0.6166508197784424,
+      "mae": 0.39195239543914795
+    },
+    {
+      "name": "quadratic_spring_thr3.5",
+      "family": "quadratic_spring",
+      "r2_full": 0.6161041259765625,
+      "mae": 0.3914892375469208
+    },
+    {
+      "name": "linear_spring_thr2.5",
+      "family": "linear_spring",
+      "r2_full": 0.6155933141708374,
+      "mae": 0.3915277123451233
+    }
+  ]
+}

@@ -1,0 +1,455 @@
+{
+  "curriculum_stage": 4,
+  "seeds": [
+    42,
+    43,
+    44,
+    45
+  ],
+  "algorithms": [
+    {
+      "algo": "sac",
+      "label": "SAC",
+      "model_path": "E:\\gym-pybullet-drones\\gym_pybullet_drones\\examples\\runs\\static_nav\\sac_modified_static_nav_sac_30m_curriculum_v5_seed0_20260313-003023\\best_model\\best_model.zip",
+      "equation_json": "E:\\gym-pybullet-drones\\gym_pybullet_drones\\examples\\runs\\static_nav\\sac_modified_static_nav_sac_30m_curriculum_v5_seed0_20260313-003023\\policy_analysis\\shap_equation\\shap_distillation_equation.json",
+      "equations": {
+        "action_x": "Action X = 0.0108 + 0.1984 * goal_dx + 0.0562 * vx + 0.2235 * repulsion_x - 0.4392 * repulsion_x_gate + 0.1689 * uav_x + 0.2486 * goal_dy + 0.2474 * uav_y",
+        "action_y": "Action Y = -0.0628 + 0.7089 * goal_dy + 0.0503 * vy + 0.4691 * repulsion_y - 0.5352 * repulsion_y_gate + 0.6672 * uav_y + 0.2925 * danger_gate",
+        "r2_full": 0.8139982223510742,
+        "r2_x": 0.8458969593048096,
+        "r2_y": 0.7820998430252075,
+        "mae": 0.11583531647920609,
+        "candidate": "linear_spring_thr2.0"
+      },
+      "policy_summary": {
+        "successes": 4,
+        "collisions": 0,
+        "timeouts": 0,
+        "mean_goal_dist": 0.7507923096418381,
+        "mean_path_length": 17.031805515289307,
+        "mean_reward": 894.2826654442404,
+        "mean_steps": 474.5
+      },
+      "equation_summary": {
+        "successes": 0,
+        "collisions": 4,
+        "timeouts": 0,
+        "mean_goal_dist": 6.57716178894043,
+        "mean_path_length": 7.56991720199585,
+        "mean_reward": 116.67963938879927,
+        "mean_steps": 124.5
+      },
+      "trajectory_match_summary": {
+        "mean_resampled_l2": 6.549959778785706,
+        "max_resampled_l2": 11.31843376159668,
+        "mean_endpoint_distance": 6.1379112005233765
+      },
+      "policy_episodes": [
+        {
+          "success": true,
+          "collision": false,
+          "timeout": false,
+          "goal_dist": 0.6629571318626404,
+          "steps": 809,
+          "path_length": 22.294086456298828,
+          "total_reward": 1492.0090562668959,
+          "seed": 42
+        },
+        {
+          "success": true,
+          "collision": false,
+          "timeout": false,
+          "goal_dist": 0.8112438917160034,
+          "steps": 334,
+          "path_length": 15.310014724731445,
+          "total_reward": 627.9781385869553,
+          "seed": 43
+        },
+        {
+          "success": true,
+          "collision": false,
+          "timeout": false,
+          "goal_dist": 0.7733421921730042,
+          "steps": 448,
+          "path_length": 16.575546264648438,
+          "total_reward": 845.7436338555549,
+          "seed": 44
+        },
+        {
+          "success": true,
+          "collision": false,
+          "timeout": false,
+          "goal_dist": 0.7556260228157043,
+          "steps": 307,
+          "path_length": 13.947574615478516,
+          "total_reward": 611.3998330675552,
+          "seed": 45
+        }
+      ],
+      "equation_episodes": [
+        {
+          "success": false,
+          "collision": true,
+          "timeout": false,
+          "goal_dist": 7.171513080596924,
+          "steps": 110,
+          "path_length": 6.7335944175720215,
+          "total_reward": 115.27509123383192,
+          "seed": 42
+        },
+        {
+          "success": false,
+          "collision": true,
+          "timeout": false,
+          "goal_dist": 7.109858989715576,
+          "steps": 118,
+          "path_length": 7.152945041656494,
+          "total_reward": 98.37850863565983,
+          "seed": 43
+        },
+        {
+          "success": false,
+          "collision": true,
+          "timeout": false,
+          "goal_dist": 7.265542030334473,
+          "steps": 114,
+          "path_length": 6.927242279052734,
+          "total_reward": 106.42775740429065,
+          "seed": 44
+        },
+        {
+          "success": false,
+          "collision": true,
+          "timeout": false,
+          "goal_dist": 4.761733055114746,
+          "steps": 156,
+          "path_length": 9.465887069702148,
+          "total_reward": 146.63720028141472,
+          "seed": 45
+        }
+      ],
+      "trajectory_match_episodes": [
+        {
+          "mean_resampled_l2": 8.351444244384766,
+          "max_resampled_l2": 11.31843376159668,
+          "endpoint_distance": 6.824211597442627,
+          "seed": 42
+        },
+        {
+          "mean_resampled_l2": 5.926287651062012,
+          "max_resampled_l2": 8.917637825012207,
+          "endpoint_distance": 6.7493977546691895,
+          "seed": 43
+        },
+        {
+          "mean_resampled_l2": 7.0673604011535645,
+          "max_resampled_l2": 10.147875785827637,
+          "endpoint_distance": 6.911375522613525,
+          "seed": 44
+        },
+        {
+          "mean_resampled_l2": 4.8547468185424805,
+          "max_resampled_l2": 7.760148525238037,
+          "endpoint_distance": 4.066659927368164,
+          "seed": 45
+        }
+      ]
+    },
+    {
+      "algo": "td3",
+      "label": "TD3",
+      "model_path": "E:\\gym-pybullet-drones\\gym_pybullet_drones\\examples\\runs\\kf_nav_suite\\kf_baselines_20260314-164705\\runs\\td3_modified_static_nav_kf_baselines_20260314-173657\\best_model\\best_model.zip",
+      "equation_json": "E:\\gym-pybullet-drones\\gym_pybullet_drones\\examples\\runs\\kf_nav_suite\\kf_baselines_20260314-164705\\runs\\td3_modified_static_nav_kf_baselines_20260314-173657\\policy_analysis\\shap_equation\\shap_distillation_equation.json",
+      "equations": {
+        "action_x": "Action X = -0.0649 + 0.4012 * goal_dx + 0.0549 * vx - 0.8803 * repulsion_x + 1.1576 * repulsion_x_gate + 0.3748 * uav_x - 0.0089 * uav_y + 0.0732 * danger_gate",
+        "action_y": "Action Y = -0.0145 + 0.1173 * goal_dy + 0.0613 * vy + 1.2705 * repulsion_y - 2.0142 * repulsion_y_gate + 0.0961 * uav_y + 0.2688 * goal_dx + 0.2576 * uav_x",
+        "r2_full": 0.8326132297515869,
+        "r2_x": 0.7629190683364868,
+        "r2_y": 0.9023012518882751,
+        "mae": 0.06298404186964035,
+        "candidate": "exp_decay_2.0_thr4.5"
+      },
+      "policy_summary": {
+        "successes": 4,
+        "collisions": 0,
+        "timeouts": 0,
+        "mean_goal_dist": 0.649498775601387,
+        "mean_path_length": 23.800753355026245,
+        "mean_reward": 2878.0620440399316,
+        "mean_steps": 1291.0
+      },
+      "equation_summary": {
+        "successes": 0,
+        "collisions": 4,
+        "timeouts": 0,
+        "mean_goal_dist": 5.460463464260101,
+        "mean_path_length": 8.967861533164978,
+        "mean_reward": 61.798769148173065,
+        "mean_steps": 160.0
+      },
+      "trajectory_match_summary": {
+        "mean_resampled_l2": 7.075343132019043,
+        "max_resampled_l2": 12.999747276306152,
+        "mean_endpoint_distance": 5.01183420419693
+      },
+      "policy_episodes": [
+        {
+          "success": true,
+          "collision": false,
+          "timeout": false,
+          "goal_dist": 0.6499008536338806,
+          "steps": 1518,
+          "path_length": 26.849014282226562,
+          "total_reward": 3329.285963362763,
+          "seed": 42
+        },
+        {
+          "success": true,
+          "collision": false,
+          "timeout": false,
+          "goal_dist": 0.6492952704429626,
+          "steps": 779,
+          "path_length": 19.22049331665039,
+          "total_reward": 1706.858030127551,
+          "seed": 43
+        },
+        {
+          "success": true,
+          "collision": false,
+          "timeout": false,
+          "goal_dist": 0.6488825082778931,
+          "steps": 2583,
+          "path_length": 35.47369384765625,
+          "total_reward": 5870.101634369346,
+          "seed": 44
+        },
+        {
+          "success": true,
+          "collision": false,
+          "timeout": false,
+          "goal_dist": 0.6499164700508118,
+          "steps": 284,
+          "path_length": 13.659811973571777,
+          "total_reward": 606.002548300066,
+          "seed": 45
+        }
+      ],
+      "equation_episodes": [
+        {
+          "success": false,
+          "collision": true,
+          "timeout": false,
+          "goal_dist": 3.8180019855499268,
+          "steps": 169,
+          "path_length": 10.321203231811523,
+          "total_reward": 77.3287415325872,
+          "seed": 42
+        },
+        {
+          "success": false,
+          "collision": true,
+          "timeout": false,
+          "goal_dist": 6.697158336639404,
+          "steps": 140,
+          "path_length": 7.648101806640625,
+          "total_reward": 60.27660428842698,
+          "seed": 43
+        },
+        {
+          "success": false,
+          "collision": true,
+          "timeout": false,
+          "goal_dist": 6.7324113845825195,
+          "steps": 136,
+          "path_length": 7.537604808807373,
+          "total_reward": 67.06192749714302,
+          "seed": 44
+        },
+        {
+          "success": false,
+          "collision": true,
+          "timeout": false,
+          "goal_dist": 4.594282150268555,
+          "steps": 195,
+          "path_length": 10.36453628540039,
+          "total_reward": 42.527803274535074,
+          "seed": 45
+        }
+      ],
+      "trajectory_match_episodes": [
+        {
+          "mean_resampled_l2": 7.327373504638672,
+          "max_resampled_l2": 11.899256706237793,
+          "endpoint_distance": 3.325082540512085,
+          "seed": 42
+        },
+        {
+          "mean_resampled_l2": 8.02220630645752,
+          "max_resampled_l2": 11.452507972717285,
+          "endpoint_distance": 6.330541610717773,
+          "seed": 43
+        },
+        {
+          "mean_resampled_l2": 9.222723007202148,
+          "max_resampled_l2": 12.999747276306152,
+          "endpoint_distance": 6.369994163513184,
+          "seed": 44
+        },
+        {
+          "mean_resampled_l2": 3.729069709777832,
+          "max_resampled_l2": 5.691418170928955,
+          "endpoint_distance": 4.021718502044678,
+          "seed": 45
+        }
+      ]
+    },
+    {
+      "algo": "ddpg",
+      "label": "DDPG",
+      "model_path": "E:\\gym-pybullet-drones\\gym_pybullet_drones\\examples\\runs\\kf_nav_suite\\kf_baselines_20260314-164705\\runs\\ddpg_modified_static_nav_kf_stage4_optuna_20260314-204207\\best_model\\best_model.zip",
+      "equation_json": "E:\\gym-pybullet-drones\\gym_pybullet_drones\\examples\\runs\\kf_nav_suite\\kf_baselines_20260314-164705\\runs\\ddpg_modified_static_nav_kf_stage4_optuna_20260314-204207\\policy_analysis\\shap_equation\\shap_distillation_equation.json",
+      "equations": {
+        "action_x": "Action X = 0.0101 + 0.1867 * goal_dx + 0.0616 * vx - 0.0478 * repulsion_x_gate + 0.1754 * uav_x",
+        "action_y": "Action Y = 0.0176 + 0.2085 * goal_dy + 0.0619 * vy + 0.1731 * repulsion_y - 0.2362 * repulsion_y_gate - 0.1398 * goal_dx - 0.1427 * uav_x + 0.1956 * uav_y",
+        "r2_full": 0.9394375085830688,
+        "r2_x": 0.9469988942146301,
+        "r2_y": 0.931878387928009,
+        "mae": 0.07619021832942963,
+        "candidate": "exp_decay_0.5_thr3.5"
+      },
+      "policy_summary": {
+        "successes": 4,
+        "collisions": 0,
+        "timeouts": 0,
+        "mean_goal_dist": 0.6716940850019455,
+        "mean_path_length": 17.454057216644287,
+        "mean_reward": 569.6761658577088,
+        "mean_steps": 418.75
+      },
+      "equation_summary": {
+        "successes": 3,
+        "collisions": 1,
+        "timeouts": 0,
+        "mean_goal_dist": 2.1661325097084045,
+        "mean_path_length": 13.061282873153687,
+        "mean_reward": 406.7906233054647,
+        "mean_steps": 276.75
+      },
+      "trajectory_match_summary": {
+        "mean_resampled_l2": 2.949362963438034,
+        "max_resampled_l2": 8.593849182128906,
+        "mean_endpoint_distance": 1.8513330221176147
+      },
+      "policy_episodes": [
+        {
+          "success": true,
+          "collision": false,
+          "timeout": false,
+          "goal_dist": 0.7475534677505493,
+          "steps": 447,
+          "path_length": 15.689709663391113,
+          "total_reward": 477.597940743222,
+          "seed": 42
+        },
+        {
+          "success": true,
+          "collision": false,
+          "timeout": false,
+          "goal_dist": 0.6464284062385559,
+          "steps": 424,
+          "path_length": 20.553939819335938,
+          "total_reward": 550.7528036590344,
+          "seed": 43
+        },
+        {
+          "success": true,
+          "collision": false,
+          "timeout": false,
+          "goal_dist": 0.6487530469894409,
+          "steps": 419,
+          "path_length": 19.770973205566406,
+          "total_reward": 547.1841774290215,
+          "seed": 44
+        },
+        {
+          "success": true,
+          "collision": false,
+          "timeout": false,
+          "goal_dist": 0.6440414190292358,
+          "steps": 385,
+          "path_length": 13.801606178283691,
+          "total_reward": 703.1697415995576,
+          "seed": 45
+        }
+      ],
+      "equation_episodes": [
+        {
+          "success": false,
+          "collision": true,
+          "timeout": false,
+          "goal_dist": 6.7428507804870605,
+          "steps": 135,
+          "path_length": 7.244345664978027,
+          "total_reward": 127.9242353536872,
+          "seed": 42
+        },
+        {
+          "success": true,
+          "collision": false,
+          "timeout": false,
+          "goal_dist": 0.6471035480499268,
+          "steps": 360,
+          "path_length": 15.787628173828125,
+          "total_reward": 532.6932189427099,
+          "seed": 43
+        },
+        {
+          "success": true,
+          "collision": false,
+          "timeout": false,
+          "goal_dist": 0.6381946206092834,
+          "steps": 364,
+          "path_length": 15.823484420776367,
+          "total_reward": 544.2048721269517,
+          "seed": 44
+        },
+        {
+          "success": true,
+          "collision": false,
+          "timeout": false,
+          "goal_dist": 0.6363810896873474,
+          "steps": 248,
+          "path_length": 13.389673233032227,
+          "total_reward": 422.3401667985098,
+          "seed": 45
+        }
+      ],
+      "trajectory_match_episodes": [
+        {
+          "mean_resampled_l2": 6.378576755523682,
+          "max_resampled_l2": 8.593849182128906,
+          "endpoint_distance": 6.643836498260498,
+          "seed": 42
+        },
+        {
+          "mean_resampled_l2": 1.243898868560791,
+          "max_resampled_l2": 2.424403190612793,
+          "endpoint_distance": 0.3747531473636627,
+          "seed": 43
+        },
+        {
+          "mean_resampled_l2": 1.1560248136520386,
+          "max_resampled_l2": 2.288520574569702,
+          "endpoint_distance": 0.20839183032512665,
+          "seed": 44
+        },
+        {
+          "mean_resampled_l2": 3.018951416015625,
+          "max_resampled_l2": 6.418861389160156,
+          "endpoint_distance": 0.17835061252117157,
+          "seed": 45
+        }
+      ]
+    }
+  ]
+}

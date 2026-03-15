@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+.DS_Store
+Thumbs.db
+
+paper_springer/build/*.aux
+paper_springer/build/*.bbl
+paper_springer/build/*.blg
+paper_springer/build/*.log
+paper_springer/build/*.out
+paper_springer/build/*.toc

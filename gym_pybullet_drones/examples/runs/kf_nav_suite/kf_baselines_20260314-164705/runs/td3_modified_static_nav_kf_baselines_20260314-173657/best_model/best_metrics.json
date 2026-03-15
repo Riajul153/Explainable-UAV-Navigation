@@ -1,0 +1,18 @@
+{
+  "mean_reward": 3363.1011820887215,
+  "std_reward": 3004.6548028635866,
+  "mean_episode_length": 1512.25,
+  "std_episode_length": 1310.401918305983,
+  "success_rate": 1.0,
+  "collision_rate": 0.0,
+  "safety_violation_rate": 0.0,
+  "timeout_rate": 0.0,
+  "mean_path_length": 40.090206950349966,
+  "mean_final_goal_dist": 0.6818948090076447,
+  "mean_min_collision_clearance": 0.7610936537384987,
+  "mean_min_safety_clearance": 0.5110936388373375,
+  "success_mean_reward": 3363.1011820887215,
+  "success_mean_episode_length": 1512.25,
+  "timesteps": 3325000,
+  "curriculum_stage": 4
+}

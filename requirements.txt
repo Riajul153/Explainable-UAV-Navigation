@@ -1,0 +1,14 @@
+numpy>=1.26,<3
+scipy>=1.12
+matplotlib>=3.8
+pandas>=2.2
+torch>=2.7
+stable-baselines3>=2.7
+gymnasium>=1.2
+pybullet>=3.2.7
+optuna>=4.7
+shap>=0.51
+scikit-learn>=1.5
+lime>=0.2.0.1
+tensorboard>=2.20
+tqdm>=4.67

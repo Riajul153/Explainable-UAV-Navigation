@@ -1,0 +1,120 @@
+{
+  "curriculum_stage": 1,
+  "seeds": [
+    42,
+    43,
+    44,
+    45
+  ],
+  "equation_json": "E:\\gym-pybullet-drones\\policy_analysis\\shap_distillation_equation.json",
+  "controllers": [
+    {
+      "label": "Original Neural Network",
+      "id": "sac",
+      "summary": {
+        "successes": 4,
+        "collisions": 0,
+        "timeouts": 0,
+        "mean_goal_dist": 0.7799904495477676,
+        "mean_path_length": 14.691284418106079,
+        "mean_reward": 516.3628483037674
+      },
+      "episodes": [
+        {
+          "success": true,
+          "collision": false,
+          "timeout": false,
+          "goal_dist": 0.6498542428016663,
+          "steps": 307,
+          "path_length": 14.978425025939941,
+          "total_reward": 460.7418433672386,
+          "seed": 42
+        },
+        {
+          "success": true,
+          "collision": false,
+          "timeout": false,
+          "goal_dist": 0.7978056073188782,
+          "steps": 327,
+          "path_length": 15.00577163696289,
+          "total_reward": 534.679988896505,
+          "seed": 43
+        },
+        {
+          "success": true,
+          "collision": false,
+          "timeout": false,
+          "goal_dist": 0.9419280886650085,
+          "steps": 325,
+          "path_length": 15.168198585510254,
+          "total_reward": 527.1313312521227,
+          "seed": 44
+        },
+        {
+          "success": true,
+          "collision": false,
+          "timeout": false,
+          "goal_dist": 0.7303738594055176,
+          "steps": 297,
+          "path_length": 13.61274242401123,
+          "total_reward": 542.8982296992033,
+          "seed": 45
+        }
+      ]
+    },
+    {
+      "label": "SHAP Distilled Equation",
+      "id": "shap",
+      "summary": {
+        "successes": 4,
+        "collisions": 0,
+        "timeouts": 0,
+        "mean_goal_dist": 0.6479918360710144,
+        "mean_path_length": 15.333110332489014,
+        "mean_reward": 402.54087405204984
+      },
+      "episodes": [
+        {
+          "success": true,
+          "collision": false,
+          "timeout": false,
+          "goal_dist": 0.6482417583465576,
+          "steps": 623,
+          "path_length": 15.654224395751953,
+          "total_reward": 418.8225506876371,
+          "seed": 42
+        },
+        {
+          "success": true,
+          "collision": false,
+          "timeout": false,
+          "goal_dist": 0.6469594836235046,
+          "steps": 580,
+          "path_length": 15.822031021118164,
+          "total_reward": 316.29838342305504,
+          "seed": 43
+        },
+        {
+          "success": true,
+          "collision": false,
+          "timeout": false,
+          "goal_dist": 0.6478093266487122,
+          "steps": 577,
+          "path_length": 15.864938735961914,
+          "total_reward": 298.95490808881556,
+          "seed": 44
+        },
+        {
+          "success": true,
+          "collision": false,
+          "timeout": false,
+          "goal_dist": 0.6489567756652832,
+          "steps": 481,
+          "path_length": 13.991247177124023,
+          "total_reward": 576.0876540086919,
+          "seed": 45
+        }
+      ]
+    }
+  ]
+}
