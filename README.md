@@ -114,14 +114,3 @@ python run_policy_analysis_suite.py ^
   --curriculum-stage 4
 ```
 
-## Suggested GitHub Scope
-
-Keep this repository code-only.
-
-Store these separately if needed:
-
-- checkpoints
-- TensorBoard logs
-- generated figures
-- paper files
-- markdown reports
