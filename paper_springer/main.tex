@@ -3,11 +3,14 @@
 \usepackage[T1]{fontenc}
 \usepackage{graphicx}
 \usepackage{amsmath}
+\usepackage{amssymb}
 \usepackage{booktabs}
 \usepackage{multirow}
 \usepackage{siunitx}
 \usepackage{array}
 \usepackage{url}
+\usepackage{dblfloatfix}
+\usepackage[section]{placeins}
 \usepackage[hidelinks]{hyperref}
 
 \sisetup{
@@ -16,8 +19,23 @@
   round-precision=3
 }
 
-\title{Explainability-Guided Distillation of Robust UAV Navigation Policies in a Noisy PyBullet Environment}
-\titlerunning{Explainability-Guided Distillation for UAV Navigation}
+\raggedbottom
+\setlength{\textfloatsep}{8pt plus 2pt minus 2pt}
+\setlength{\dbltextfloatsep}{8pt plus 2pt minus 2pt}
+\setlength{\floatsep}{6pt plus 2pt minus 2pt}
+\setlength{\dblfloatsep}{6pt plus 2pt minus 2pt}
+\setlength{\intextsep}{8pt plus 2pt minus 2pt}
+\setlength{\abovecaptionskip}{4pt}
+\setlength{\belowcaptionskip}{0pt}
+\renewcommand{\topfraction}{0.95}
+\renewcommand{\bottomfraction}{0.9}
+\renewcommand{\textfraction}{0.05}
+\renewcommand{\floatpagefraction}{0.85}
+\renewcommand{\dbltopfraction}{0.95}
+\renewcommand{\dblfloatpagefraction}{0.85}
+
+\title{Explainability-Guided Distillation of Robust UAV Navigation Policies under Stochastic Dynamics}
+\titlerunning{Explainability-Guided Distillation under Stochastic Dynamics}
 
 \author{Anonymous Submission}
 \authorrunning{Anonymous Submission}
@@ -27,46 +45,135 @@
 \maketitle
 
 \begin{abstract}
-We study whether a robust UAV navigation policy can also be recovered as a compact analytical controller. To do so, we build a custom Gymnasium-compatible environment on top of PyBullet and evaluate all reported models directly in the hardest stage-4 setting, which combines trajectory-aware rewards, noisy observations, Kalman-filtered state estimation, aerodynamic drag, wind gusts, and drifting obstacles. These perturbations are chosen to target specific failure modes rather than to act as generic randomization. We train SAC, TD3, DDPG, and PPO in this single-shot stage-4 environment and then analyze the learned controllers with decision-tree surrogates, LIME, SHAP, action-vector fields, Q-value landscapes, and rollout-aware equation fitting. The strongest result is that policy quality and policy distillability separate clearly: the final SHAP-guided SAC equation preserves 4/4 held-out stage-4 successes, whereas DDPG preserves 2/4 and TD3 preserves 0/4 under the same evaluation seeds. The recovered SAC law has the structure of a damped contextual potential field even though no such controller was hard-coded into the reward, and it avoids the local-minimum failures that trap an untuned artificial potential field on the same map. We therefore frame the paper as an empirical study of explainability-guided policy distillation for noisy continuous UAV navigation, rather than as a new RL method.
+Reinforcement learning is increasingly attractive for control, but learned policies remain difficult to trust because they are black-box mappings, sensitive to hyperparameters, and hard to tune after deployment. We study whether a successful UAV-navigation policy can also be recovered as a compact physical control law. To do so, we build a custom Gymnasium--PyBullet environment with noisy sensing, Kalman-filtered state estimation, aerodynamic drag, wind gusts, and obstacle drift, and train SAC, TD3, DDPG, and PPO under the same stochastic dynamics. We then analyze the learned controllers with SHAP, LIME, decision-tree surrogates, vector-field visualizations, and rollout-aware equation distillation. The main result is that the strongest policy can be expressed as a compact damped contextual potential field with clear goal-attraction, velocity-damping, and local-repulsion terms. This positions policy distillability as a practical evaluation axis alongside reward and success rate, with clear implications for inspection, manual retuning, and eventual sim-to-real transfer.
 \keywords{UAV navigation \and reinforcement learning \and Kalman filtering \and explainable AI \and policy distillation}
 \end{abstract}
 
 \section{Introduction}
 Learning-based UAV navigation is attractive because hand-crafted obstacle-avoidance rules often become brittle once sensing becomes noisy, obstacles drift, or dynamics deviate from the nominal model. At the same time, high-performing deep RL policies are difficult to audit, difficult to transfer, and difficult to compare beyond scalar reward. This raises a broader question: if a controller succeeds in a noisy environment, can its behavior be explained as a compact control law rather than only as a black-box network?
 
-We address that question in a controlled simulation study. The environment is a custom Gymnasium-style task \cite{Brockman2016Gym} backed by PyBullet \cite{Coumans2021PyBullet}, with a 2D quadrotor-like agent navigating through mixed-shape obstacles toward a fixed goal. All experiments reported in the paper train directly in a single-shot stage-4 setting. That stage combines trajectory penalties, measurement noise, a Kalman filter \cite{Kalman1960}, aerodynamic drag, wind gusts, and obstacle drift. These perturbations are not arbitrary. They target the main failure modes seen in early policies: poor state estimation, overconfident straight-line motion, and sensitivity to mild distribution shift. In that sense, the environment behaves like a structured robustness benchmark inspired by sim-to-real randomization work \cite{Tobin2017DomainRandomization,Peng2018DynamicsRandomization}, but with perturbations that remain interpretable.
+We address that question in a controlled simulation study. The environment is a custom Gymnasium-style task~\cite{Brockman2016Gym} backed by PyBullet~\cite{Coumans2021PyBullet}, with a quadrotor-like agent moving in the horizontal plane of a 3D scene while navigating through mixed-shape obstacles toward a fixed goal. All experiments reported in the paper use the same stochastic setting: trajectory penalties, measurement noise, a Kalman filter~\cite{Kalman1960}, aerodynamic drag, wind gusts, and obstacle drift. These perturbations are not arbitrary. They target the main failure modes seen in early policies: poor state estimation, overconfident straight-line motion, and sensitivity to mild distribution shift. In that sense, the environment behaves like a structured robustness benchmark inspired by sim-to-real randomization work~\cite{Tobin2017DomainRandomization,Peng2018DynamicsRandomization}, but with perturbations that remain interpretable.
 
-The second part of the paper focuses on explanation and distillation. We combine decision-tree surrogates, LIME \cite{Ribeiro2016LIME}, SHAP \cite{Lundberg2017SHAP}, vector-field plots, Q-value heatmaps, and rollout-aware equation extraction. The main empirical finding is that the best SAC controller behaves like a damped contextual potential field \cite{Khatib1986APF}: action depends primarily on raw goal displacement, velocity damping, and a short-range obstacle repulsion term. This structure was not hard-coded. It emerged from training and was recovered post hoc. By contrast, TD3 and DDPG can achieve strong task success while remaining much harder to summarize with the same interpretable controller family.
+The second part of the paper focuses on explanation and distillation. We combine decision-tree surrogates, LIME~\cite{Ribeiro2016LIME}, SHAP~\cite{Lundberg2017SHAP}, vector-field plots, Q-value heatmaps, and rollout-aware equation extraction. The main empirical finding is that the best SAC controller behaves like a damped contextual potential field~\cite{Khatib1986APF}: action depends primarily on raw goal displacement, velocity damping, and a short-range obstacle repulsion term. This structure was not hard-coded. It emerged from training and was recovered post hoc. By contrast, TD3 and DDPG can achieve strong task success while remaining much harder to summarize with the same interpretable controller family.
 
 The contribution is therefore a combined environment-design, robustness, and explainability study with three concrete outcomes:
 \begin{enumerate}
-\item a staged noisy PyBullet environment for UAV navigation with a Kalman-filter state-estimation layer;
+\item a single-shot noisy PyBullet environment for UAV navigation with a Kalman-filter state-estimation layer;
 \item an explainability pipeline that goes beyond feature attribution and validates distilled equations in closed-loop rollouts;
 \item empirical evidence that policy success and policy distillability are different properties, with SAC emerging as the most faithful analytical surrogate in our setting.
 \end{enumerate}
 
-\section{Related Work}
-Deep RL has been used widely for navigation and obstacle avoidance in both ground and aerial robots, including continuous-control drone settings \cite{Marino2024KalmanRL,Huang2024QuadrotorSwarm}. However, much of that literature focuses on success rate and transfer robustness rather than on whether the learned policy can be turned back into a compact control law. Benchmarking work such as Arena-Bench \cite{Kastner2022ArenaBench} has also emphasized how sensitive obstacle-avoidance performance can be to environment dynamics and evaluation protocol. Our environment design follows that line of thought: we do not assume that clean-navigation success is enough to demonstrate robustness.
+The broader motivation is interpretability-by-design: rather than adding explanation as an afterthought, we treat closed-loop policy fidelity as the primary validation criterion for any distilled surrogate. This changes the evaluation question from ``can the explanation approximate the policy locally?'' to ``can the explanation \emph{replace} the policy in a full rollout?''. The remainder of the paper is structured as follows. Section~2 surveys related work. Section~3 introduces the preliminaries, including the problem statement and controller setup. Section~4 describes the environment and training protocol. Section~5 presents the result analysis. Section~6 presents the explainability and distillation pipeline. Section~7 discusses limitations and conclusions.
 
-There is also a clear line of work on interpretable or explainable RL. Surveys by Milani et al.\ \cite{Milani2022XRL} and related explainable-robotics work \cite{Lee2023AdaptiveExplainable} show that explanation methods in RL range from saliency and attribution to symbolic surrogates, hierarchical skills, and policy extraction. SHAP \cite{Lundberg2017SHAP} and LIME \cite{Ribeiro2016LIME} have become standard post hoc explanation tools, while policy distillation \cite{Rusu2015PolicyDistillation} and verification-oriented extraction methods such as VIPER \cite{Bastani2018VIPER} aim to replace black-box policies with simpler surrogates. More recent work on concept-based policy distillation \cite{Bekkemoen2025ConceptDistill} further argues that interpretable latent concepts can preserve useful control structure.
+\section{Related Work}
+Deep RL has been used widely for navigation and obstacle avoidance in both ground and aerial robots, including continuous-control drone settings~\cite{Marino2024KalmanRL,Huang2024QuadrotorSwarm}. However, much of that literature focuses on success rate and transfer robustness rather than on whether the learned policy can be turned back into a compact control law. Benchmarking work such as Arena-Bench~\cite{Kastner2022ArenaBench} has also emphasized how sensitive obstacle-avoidance performance can be to environment dynamics and evaluation protocol. Our environment design follows that line of thought: we do not assume that clean-navigation success is enough to demonstrate robustness.
+
+There is also a clear line of work on interpretable or explainable RL. Surveys by Milani et al.~\cite{Milani2022XRL} and related explainable-robotics work~\cite{Lee2023AdaptiveExplainable} show that explanation methods in RL range from saliency and attribution to symbolic surrogates, hierarchical skills, and policy extraction. SHAP~\cite{Lundberg2017SHAP} and LIME~\cite{Ribeiro2016LIME} have become standard post hoc explanation tools, while policy distillation~\cite{Rusu2015PolicyDistillation} and verification-oriented extraction methods such as VIPER~\cite{Bastani2018VIPER} aim to replace black-box policies with simpler surrogates. More recent work on concept-based policy distillation~\cite{Bekkemoen2025ConceptDistill} further argues that interpretable latent concepts can preserve useful control structure.
 
 Our work differs from those directions in two ways. First, the target is a continuous UAV-navigation controller, not a discrete toy domain or a concept-level explanation alone. Second, we treat \emph{closed-loop fidelity} as the key evaluation criterion for distillation. A surrogate with high one-step $R^2$ but poor rollout behavior is not considered faithful enough. This is the central methodological difference from many explanation pipelines, which stop at importance rankings or local linear explanations.
 
-Finally, combining filtering and RL for navigation is itself not new. Marino and Guglieri \cite{Marino2024KalmanRL}, for example, combine an interacting multiple model Kalman filter with PPO for drone navigation. Our contribution is therefore narrower and, we believe, more defensible: in a custom PyBullet UAV environment, we combine a structured noise-and-dynamics benchmark, a Kalman-filter ablation, and rollout-validated analytical distillation. The novelty lies less in any single ingredient than in the way they are tied together to show a measurable gap between policy success and policy distillability.
+Finally, combining filtering and RL for navigation is itself not new. Marino and Guglieri~\cite{Marino2024KalmanRL}, for example, combine an interacting multiple model Kalman filter with PPO for drone navigation. Our contribution is therefore narrower and, we believe, more defensible: in a custom PyBullet UAV environment, we combine a structured noise-and-dynamics benchmark, a Kalman-filter ablation, and rollout-validated analytical distillation. The novelty lies less in any single ingredient than in the way they are tied together to show a measurable gap between policy success and policy distillability.
+
+\section{Preliminaries}
+\subsection{Problem Statement}
+We formulate the UAV-navigation task as a continuous partially observable Markov decision process (POMDP), defined by the tuple $(\mathcal{S}, \mathcal{O}, \mathcal{A}, \mathcal{P}, \mathcal{R}, \gamma)$. At each time step $t$, the environment occupies a latent state $s_t \in \mathcal{S}$, the agent receives an observation $o_t \in \mathcal{O}$, selects an action $a_t \in \mathcal{A}$ according to a policy $\pi(a_t \mid o_t)$, and receives a scalar reward $r_t = \mathcal{R}(s_t, a_t)$. The environment then transitions to $s_{t+1}$ according to $\mathcal{P}(s_{t+1}\mid s_t, a_t)$. The objective is to maximize the expected discounted return
+\begin{equation}
+  G_t = \sum_{k=0}^{\infty}\gamma^k r_{t+k},
+\end{equation}
+where $\gamma \in [0,1)$ controls the effective planning horizon. For the underlying latent-control problem, the optimal action-value function satisfies the Bellman optimality relation
+\begin{equation}
+  Q^*(s,a) = \mathbb{E}\!\left[r + \gamma\,\max_{a'}Q^*(s',a') \,\Big|\, s,a\right].
+\end{equation}
+
+Our specific instantiation is a UAV-navigation problem embedded in a 3D PyBullet world, but with commanded motion intentionally constrained to the horizontal $(x,y)$ plane. Altitude and out-of-plane attitude are fixed, so the agent solves a planar avoidance task while still interacting with 3D geometry for collision checking and rendering.
+
+\paragraph{Latent state space $\mathcal{S}$ and observation space $\mathcal{O}$.}
+The latent simulator state contains the true planar UAV kinematics, the fixed goal location, and the current obstacle field:
+\begin{equation}
+  s_t = \bigl[x_t, y_t, v_{x,t}, v_{y,t}, g_x, g_y, \{o_{i,x}, o_{i,y}, \rho_i, \kappa_i\}_{i=1}^{8}\bigr],
+\end{equation}
+where $(x_t,y_t)$ and $(v_{x,t},v_{y,t})$ are the UAV position and velocity, $(g_x,g_y)$ is the goal location, and each obstacle contributes its planar position, effective radius $\rho_i$, and shape code $\kappa_i \in \{\texttt{sphere},\texttt{box},\texttt{cylinder}\}$.
+
+The policy does not receive $s_t$ directly. Instead, it acts on a 39-dimensional observation vector,
+\begin{equation}
+  o_t = \bigl[\hat{x}_t,\hat{y}_t,\hat{v}_{x,t},\hat{v}_{y,t},\Delta g_x,\Delta g_y,d_g,\{o^{\mathrm{obs}}_{i,x},o^{\mathrm{obs}}_{i,y},\rho_i,\kappa_i\}_{i=1}^{8}\bigr] \in \mathbb{R}^{39},
+\end{equation}
+where $(\hat{x}_t,\hat{y}_t,\hat{v}_{x,t},\hat{v}_{y,t})$ are Kalman-filtered position and velocity estimates, $(\Delta g_x,\Delta g_y)$ is the relative goal displacement, and $d_g$ is the Euclidean distance to the goal. Obstacle coordinates in the observation are noisy, while obstacle radii and shape codes remain deterministic descriptors. This separation between $s_t$ and $o_t$ is precisely why the problem is treated as a POMDP rather than a fully observed MDP.
+
+\paragraph{Action space $\mathcal{A}$.}
+The action is a bounded planar control command
+\begin{equation}
+  a_t = (a_{x,t}, a_{y,t}) \in [-1,1]^2,
+\end{equation}
+which is mapped inside the simulator to a commanded horizontal UAV velocity with maximum magnitude \SI{15}{m/s}. The action therefore represents a continuous desired motion direction and speed in the plane, not a discrete steering primitive.
+
+\paragraph{Reward function $\mathcal{R}$.}
+The reward is a structured navigation objective designed to balance target reaching, safety, and trajectory quality:
+\begin{align}
+  r_t &= r_{\text{attr}} + r_{\text{align}} + r_{\text{repel}} + r_{\text{clear}} + r_{\text{goal}} \nonumber\\
+      &\quad - c_{\text{time}} - c_{\text{stall}} - c_{\text{smooth}} - c_{\text{near}} - c_{\text{safety}} - c_{\text{collision}}.
+\end{align}
+Rather than present this as a single opaque scalar, we expose the behavioral components used in the environment:
+\begin{itemize}
+\item \textbf{Attraction/progress:} $r_{\text{attr}}$ rewards reduction in goal distance with gain $12.0$, plus an approach bonus $5\exp(-d_g/0.8)$ when the UAV is moving closer to the goal. The attractive contribution is clipped to $[-8,8]$ to prevent uncontrolled reward growth.
+\item \textbf{Directional alignment:} $r_{\text{align}} = 0.75 \cos\theta_t$ rewards velocity aligned with the goal direction.
+\item \textbf{Obstacle interaction:} $r_{\text{repel}}$ is a clipped negative repulsion term based on safety-clearance breach, while $c_{\text{safety}}=2.5$ and $c_{\text{collision}}=20.0$ impose additional penalties for entering the safety margin or colliding.
+\item \textbf{Trajectory quality:} $r_{\text{clear}}$ rewards maintaining clearance from nearby obstacles, $c_{\text{smooth}}$ penalizes jerk, $c_{\text{near}}$ penalizes near misses, and $c_{\text{stall}}=0.35$ penalizes low-progress low-speed stagnation far from the goal.
+\item \textbf{Time and success:} a per-step time cost $c_{\text{time}}=0.30$ discourages dithering, while $r_{\text{goal}}=35.0$ is awarded on successful goal reach.
+\end{itemize}
+An episode is counted as successful when the UAV reaches the goal region without collision, either by entering a \SI{0.65}{m} goal radius or by remaining within \SI{1.0}{m} of the goal for 120 consecutive simulator steps.
+
+\paragraph{Transition dynamics $\mathcal{P}$.}
+The transition kernel is governed by PyBullet. The environment steps at \SI{240}{Hz} for up to \SI{18}{s} per episode. In the noisy setting used throughout the paper, transitions include aerodynamic drag, wind gust disturbances, and small bounded obstacle drift around nominal anchor locations. From the policy's perspective, the combination of noisy observations and perturbed simulator dynamics makes the navigation problem explicitly stochastic. The Kalman filter therefore functions only as a state-estimation layer in the observation pipeline; it does not alter the underlying transition dynamics or act as a separate planner.
+
+\subsection{Reinforcement Learning Algorithms}
+We benchmark the environment using established continuous-control baselines: PPO~\cite{Schulman2017PPO} as the on-policy reference, and DDPG~\cite{Lillicrap2015DDPG}, TD3~\cite{Fujimoto2018TD3}, and SAC~\cite{Haarnoja2018SAC} as off-policy alternatives. Figure~\ref{fig:arch_blocks} summarizes the instantiated policy structures used in our study. The figure deliberately separates the actor backbone, the policy head, and the critic layout, because those distinctions matter more here than simply counting layers.
+
+Despite their different training objectives, the backbones are not radically different. SAC and TD3 both use a 256-256-256 actor MLP in our runs, DDPG uses a shallower 256-256 actor, and PPO uses a 512-256-256 actor/value pair. The main structural differences are therefore in the policy head and critic arrangement: PPO uses separate actor and value streams updated from fresh rollouts only, DDPG uses a deterministic actor with a single critic, TD3 keeps a deterministic actor but adds twin critics and delayed policy updates, and SAC combines twin critics with a stochastic Gaussian actor and entropy regularization.
+
+This architectural view is useful when reading the distillation results later in the paper. Since SAC and TD3 share the same actor depth in our implementation, SAC's better analytical surrogate cannot be explained as a trivial network-size effect. The more plausible explanation is that the stochastic SAC head and its regularized training objective yield a smoother policy surface, whereas TD3 and DDPG expose sharper deterministic corrections that are harder to compress into a compact closed-form controller.
+
+\begin{figure*}[!tb]
+\centering
+\includegraphics[width=0.97\textwidth]{figures/algorithm_architectures.pdf}
+\caption{Block-diagram summary of the policy-network structures used in the experiments. Widths are taken from the trained runs reported in Table~\ref{tab:train_hparams}. SAC and TD3 share the same actor depth; the key structural difference is that SAC uses a stochastic Gaussian actor with entropy regularization, whereas TD3 and DDPG use deterministic policy heads.}
+\label{fig:arch_blocks}
+\end{figure*}
+
+\subsection{Explainability and Policy Distillation}
+To analyze the learned policies, we employ SHAP~\cite{Lundberg2017SHAP} for global feature attribution, LIME~\cite{Ribeiro2016LIME} for local directional explanations, and depth-limited decision trees~\cite{Bastani2018VIPER} as rule-based surrogates. Crucially, we validate these explanations not merely by one-step $R^2$ fidelity, but by closed-loop rollout success on fixed evaluation seeds.
+
+\begin{table}[!tb]
+\caption{Quantitative comparison of executable surrogate controllers for the main SAC policy in the shared noisy evaluation setting.}
+\label{tab:xai_methods}
+\centering
+\footnotesize
+\begin{tabular}{lccccc}
+\toprule
+Method & $R^2_x$ & $R^2_y$ & Success & Trace dev. (m) & Endpoint dev. (m) \\
+\midrule
+Sparse linear law & 0.676 & 0.495 & 1/4 & 4.642 & 4.080 \\
+Depth-15 decision tree & 0.993 & 0.991 & 4/4 & 1.240 & 0.330 \\
+SHAP compact equation & 0.704 & 0.544 & 4/4 & 2.154 & 0.795 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:xai_methods} now makes the ranking explicit. The saved depth-15 decision tree is the most faithful policy proxy overall: it achieves near-perfect one-step fit and preserves all four evaluation successes with the smallest trajectory error. The SHAP-guided compact law remains the best \emph{analytical equation}: it is much more compact than the tree while still preserving all four evaluation successes.
 
 \section{Environment and Training Setup}
 \subsection{Custom Gymnasium/PyBullet Environment}
-The environment is a 2D navigation task implemented with a Gymnasium interface \cite{Brockman2016Gym} and simulated in PyBullet \cite{Coumans2021PyBullet}. The UAV starts near one of four corners of a \SI{10}{m} square workspace and must reach a central goal while avoiding eight mixed-shape obstacles (spheres, cylinders, and boxes). The action is a 2D velocity command in $[-1,1]^2$ scaled by a maximum speed of \SI{15}{m/s}. The observation contains UAV position and velocity, goal displacement and distance, plus obstacle positions, radii, and shape codes.
+The environment is implemented with a Gymnasium interface~\cite{Brockman2016Gym} and simulated in PyBullet~\cite{Coumans2021PyBullet}. Although the simulator itself is fully 3D, the UAV motion is constrained to the horizontal plane so that the task remains a planar navigation problem with 3D collision geometry and rendering. The UAV starts near one of four corners of a \SI{10}{m} square workspace and must reach a central goal while avoiding eight mixed-shape obstacles (spheres, cylinders, and boxes).
 
 Episodes run at \SI{240}{Hz} for up to \SI{18}{s}. Success occurs when the UAV reaches within \SI{0.65}{m} of the goal, or remains within \SI{1.0}{m} for 120 consecutive steps, without colliding. This definition prevents the agent from grazing the goal once and then drifting away.
 
-\subsection{Stage-4 Robustness Setup}
-All experiments in this paper use a single-shot stage-4 configuration. The reward combines a goal bonus, dense progress shaping, directional alignment, obstacle repulsion, a clearance bonus, a smoothness penalty, a near-miss penalty, a stall penalty, and a small per-step time cost. The state estimate is deliberately corrupted before it reaches the policy: position is perturbed by Gaussian noise with standard deviation \SI{0.05}{m}, velocity by \SI{0.10}{m/s}, the goal vector by \SI{0.05}{m}, and obstacle positions by \SI{0.08}{m}.
+\subsection{Observation and Dynamics Perturbations}
+All experiments in this paper use the same stochastic perturbation model. The reward combines a goal bonus, dense progress shaping, directional alignment, obstacle repulsion, a clearance bonus, a smoothness penalty, a near-miss penalty, a stall penalty, and a small per-step time cost. The state estimate is deliberately corrupted before it reaches the policy: position is perturbed by Gaussian noise with standard deviation \SI{0.05}{m}, velocity by \SI{0.10}{m/s}, the goal vector by \SI{0.05}{m}, and obstacle positions by \SI{0.08}{m}.
 
-We then add dynamics and geometry perturbations that make memorized straight-line behavior brittle. The UAV is subjected to aerodynamic drag with coefficient $0.12$ and wind gust noise with standard deviation $0.35$. Obstacles drift around anchored nominal locations with per-step drift standard deviation $0.018$, damping $0.965$, and a maximum anchored offset of \SI{0.30}{m}. These perturbations are not generic domain randomization for its own sake. They are chosen to create the specific observation and dynamics mismatch that motivates filtering, robustness, and explainability in the single-shot stage-4 task.
+We then add dynamics and geometry perturbations that make memorized straight-line behavior brittle. The UAV is subjected to aerodynamic drag with coefficient $0.12$ and wind gust noise with standard deviation $0.35$. Obstacles drift around anchored nominal locations with per-step drift standard deviation $0.018$, damping $0.965$, and a maximum anchored offset of \SI{0.30}{m}.
 
-\subsection{Kalman Filter}
-In the stage-4 setup, the policy no longer sees the exact UAV state. Instead, the environment corrupts position and velocity with Gaussian noise and then fuses them through a Kalman filter:
+\subsection{Kalman Filtering and State Estimation}
+Under the stochastic perturbation model, the policy no longer sees the exact UAV state. Instead, the environment corrupts position and velocity with Gaussian noise and then fuses them through a Kalman filter:
 \begin{align}
 \hat{\mathbf{x}}_{t|t-1} &= \mathbf{F}\hat{\mathbf{x}}_{t-1|t-1}, \\
 \mathbf{P}_{t|t-1} &= \mathbf{F}\mathbf{P}_{t-1|t-1}\mathbf{F}^\top + \mathbf{Q}, \\
@@ -75,16 +182,40 @@ In the stage-4 setup, the policy no longer sees the exact UAV state. Instead, th
 \end{align}
 where $\hat{\mathbf{x}} = [x, y, v_x, v_y]^\top$ and $\mathbf{F}$ is the constant-velocity transition matrix. In our implementation, the filter does not alter the physical state. It only improves the observation delivered to the policy. This distinction matters: the learned agent still has to act under noisy goals, drifting obstacles, drag, and wind, but it acts from a better state estimate.
 
+The bottom row of Fig.~\ref{fig:robustness_panels} shows why this matters empirically. The Kalman-filtered SAC run learns substantially faster and more stably than the matched no-KF variant, whereas the no-KF run improves more slowly and later collapses in final evaluation. In other words, the Kalman layer does not solve the task by itself; it improves the state estimate enough to make the downstream RL controller less brittle.
+
 \subsection{Training Protocol}
-All policies discussed in the paper are trained directly in stage 4. SAC is represented by a single-shot stage-4 run with Kalman filtering enabled. TD3, DDPG, and PPO were tuned with Optuna and then trained sequentially for 5M steps each on the same stage-4 environment with 8 parallel environments. We also trained a matched stage-4 SAC run without the Kalman filter to isolate the effect of state estimation.
+All policies discussed in the paper are trained directly in the same stochastic setting. SAC is represented by a single-shot run with Kalman filtering enabled. TD3, DDPG, and PPO were tuned with Optuna and then trained on the same noisy environment with 8 parallel environments. These baselines also trained with Kalman-filtered observations; the filter is not unique to SAC. We also trained a matched SAC run without the Kalman filter to isolate the effect of state estimation.
 
-The explainability and distillation sections focus on the SAC controller that yielded the strongest and most stable analytical surrogate under stage-4 evaluation.
+The explainability and distillation sections focus on the SAC controller that yielded the strongest and most stable analytical surrogate under the shared noisy evaluation setting.
 
-\section{Robustness Results}
+Table~\ref{tab:train_hparams} summarizes the principal hyperparameters of the runs reported in the paper. All controllers use ReLU-activated multilayer perceptrons. For off-policy methods, the listed width is used for both actor and critic streams; for PPO, the same width pattern is used for the policy and value networks. SAC used automatic entropy tuning in the trainer, while TD3 and DDPG used additive Gaussian action noise.
+
+\begin{table*}[!tb]
+\caption{Training configurations used for the reported policy-comparison, Kalman-ablation, and distillation experiments.}
+\label{tab:train_hparams}
+\centering
+\scriptsize
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lccccc p{2.0cm}p{3.2cm}}
+\toprule
+Policy & MLP widths & $n_{\text{env}}$ & Learning rate & $\gamma$ & Batch & Replay / rollout & Update settings \\
+\midrule
+SAC (Kalman) & 256-256-256 & 10 & $3.0\times10^{-4}$ & 0.99 & 256 & replay 300k & start 5k, freq 1, grad 1, $\tau=0.005$, ent=auto \\
+SAC (no KF) & 256-256-256 & 8 & $3.0\times10^{-4}$ & 0.99 & 256 & replay 300k & start 5k, freq 1, grad 1, $\tau=0.005$, ent=auto \\
+TD3 & 256-256-256 & 8 & $4.07\times10^{-4}$ & 0.99 & 1024 & replay 500k & start 10k, freq 2, grad 2, $\tau=0.005$, noise 0.10, delay 2 \\
+DDPG & 256-256 & 8 & $1.12\times10^{-4}$ & 0.995 & 1024 & replay 800k & start 10k, freq 2, grad 1, $\tau=0.005$, noise 0.15 \\
+PPO & 512-256-256 & 8 & $2.34\times10^{-5}$ & 0.995 & 1024 & rollout 2048 / env & 15 epochs, GAE 0.97, clip 0.151, ent $5.06\times10^{-5}$ \\
+\bottomrule
+\end{tabular}
+}
+\end{table*}
+
+\section{Result Analysis}
 \subsection{Algorithm Comparison}
-Figure~\ref{fig:algo_compare} compares the smoothed evaluation success rate and reward curves for directly trained stage-4 SAC, TD3, DDPG, and PPO runs, clipped to the first \SI{1.05}{M} timesteps for readability. The single-shot stage-4 SAC run still reaches reliable success fastest and remains the strongest policy overall in this window. TD3 and DDPG both attain perfect evaluation checkpoints, but their curves are less stable and later regressions are visible outside the clipped window. PPO remains the weakest baseline in this environment, with a best recorded success rate of $62.5\%$.
+As shown in the top row of Fig.~\ref{fig:robustness_panels}, SAC reaches reliable success fastest and remains the strongest trace across the comparison window, while TD3 and DDPG both attain perfect checkpoints but exhibit sharper oscillations and later regressions. PPO remains the weakest baseline in this noisy environment, topping out at a best recorded success rate of $62.5\%$; within these runs, this is consistent with its higher on-policy data demand and with SAC's smoother stochastic control law under the same perturbations.
 
-\begin{figure*}[t]
+\begin{figure*}[!tb]
 \centering
 \begin{minipage}[t]{0.49\textwidth}
 \centering
@@ -94,14 +225,19 @@ Figure~\ref{fig:algo_compare} compares the smoothed evaluation success rate and 
 \centering
 \includegraphics[width=\textwidth]{figures/paper_first_1050k_clean_mean_reward.pdf}
 \end{minipage}
-\caption{Evaluation success rate (left) and mean reward (right) for directly trained stage-4 SAC, TD3, DDPG, and PPO runs. The plots are clipped to the first \SI{1.05}{M} timesteps so that the early training dynamics can be compared on the same environment difficulty.}
-\label{fig:algo_compare}
+\vspace{0.4em}
+
+\includegraphics[width=0.82\textwidth]{figures/kalman_ablation.pdf}
+\caption{Top row: evaluation success rate and mean reward for directly trained SAC, TD3, DDPG, and PPO runs in the shared noisy setting, clipped to the first \SI{1.05}{M} timesteps. Bottom row: matched SAC training with and without Kalman filtering.}
+\label{fig:robustness_panels}
 \end{figure*}
+
+Within the comparison window, SAC combines fast rise, sustained high success, and the cleanest later behavior, whereas TD3 and DDPG are more consistent with the familiar deterministic off-policy failure mode in which critic drift and reward-shaping loopholes produce strong checkpoints followed by regression.
 
 Table~\ref{tab:alg-summary} summarizes the strongest checkpoints and final distillation results. The important point is that high task success does not guarantee faithful distillation.
 
-\begin{table}[t]
-\caption{Summary of best policy checkpoints and final SHAP-equation fidelity at stage 4.}
+\begin{table}[!tb]
+\caption{Summary of best policy checkpoints and final SHAP-equation fidelity in the shared stochastic setting.}
 \label{tab:alg-summary}
 \centering
 \footnotesize
@@ -115,79 +251,82 @@ DDPG & 1.000 & 0.500 & 3.557 \\
 PPO  & 0.625 & --    & --    \\
 \bottomrule
 \end{tabular}
+\par\vspace{2pt}
+\footnotesize\emph{Note.} We did not attempt PPO distillation because the learned PPO neural policy never became strong or stable enough to justify surrogate extraction.
 \end{table}
-
-\subsection{Kalman Filter Ablation}
-Figure~\ref{fig:kalman_ablation} shows stage-4 single-shot SAC training with and without the Kalman filter, clipped to the first \SI{1.05}{M} timesteps. The no-KF run can still reach successful checkpoints later in training, but it learns more slowly and is much more unstable. In our saved runs, the filtered single-shot SAC reached perfect evaluation success by \SI{1.65}{M} steps, while the no-KF variant required \SI{6.3}{M} steps to reach its best perfect checkpoint and later collapsed to zero success in its final evaluation.
-
-\begin{figure*}[t]
-\centering
-\includegraphics[width=\textwidth]{figures/kalman_ablation.pdf}
-\caption{Stage-4 single-shot SAC with and without the Kalman filter. The filter improves learning speed and stabilizes training by reducing the variance of the state estimate seen by the policy.}
-\label{fig:kalman_ablation}
-\end{figure*}
-
-The practical role of the filter is simple: it converts noisy position/velocity measurements into a smoother latent state before the policy maps observation to action. In our environment, that reduces spurious velocity corrections and makes the policy less brittle to the added drag, wind, and obstacle drift.
 
 \section{Explaining the Learned Policy}
 \subsection{Potential-Field-Like Behavior}
-Figure~\ref{fig:interp_panel} shows the core qualitative evidence that the main SAC policy learned a control strategy reminiscent of an artificial potential field \cite{Khatib1986APF} even though such a field was not explicitly coded into the reward. The action-vector field is plotted only over free space, so the arrows indicate how the controller bends around obstacles rather than cutting through them. The Q-value landscape forms a smooth basin around safe goal-reaching trajectories. Most importantly, the potential-field comparison now makes the failure mode explicit: an untuned APF creates a non-goal local minimum that traps the trajectory, whereas the trained stage-4 SAC policy escapes the same region and reaches the goal.
+Figure~\ref{fig:interp_panel} provides the clearest qualitative evidence that the main SAC policy learned a control strategy reminiscent of an artificial potential field~\cite{Khatib1986APF} even though such a field was not explicitly coded into the reward. The free-space action vectors bend around obstacles, the Q-value landscape forms a smooth basin around safe goal-reaching corridors, and the APF comparison makes the behavioral difference explicit: an untuned handcrafted potential field gets trapped in a non-goal local minimum, whereas the learned SAC policy accepts a temporary detour and still reaches the goal.
 
-\begin{figure*}[t]
+\begin{figure*}[!tb]
 \centering
-\includegraphics[width=\textwidth]{figures/interpretability_panel.pdf}
-\caption{Qualitative interpretation of the main SAC policy. (a) Action-vector field induced by the learned actor, plotted only in free space so obstacle interiors do not visually imply invalid actions. (b) Q-value landscape showing a smooth high-value basin near safe goal-reaching trajectories. (c) Untuned artificial potential field: the left panel shows a local-minimum trap, while the right panel shows the trained stage-4 SAC policy reaching the goal from the same start. (d) Representative trajectory traces. Together these plots suggest that the policy learned a potential-well-like structure without inheriting the classical local-minimum failure of a naive potential field.}
+\includegraphics[width=0.92\textwidth]{figures/interpretability_panel.pdf}
+\caption{Interpretability panel for the main SAC policy: action vectors, Q-value landscape, APF failure case, and representative trajectories.}
 \label{fig:interp_panel}
 \end{figure*}
 
+
 \subsection{Decision Trees, LIME, and SHAP}
-We used three complementary post hoc explanation tools. A shallow decision-tree regressor provides discrete if/then rules; LIME gives local linear explanations around selected states; and SHAP supplies global feature-attribution summaries. For the main SAC policy, the decision-tree fit reached $R^2 = 0.826$ for the $x$-action and $R^2 = 0.670$ for the $y$-action. The learned rules split primarily on raw goal displacement for action $x$ and on goal displacement together with repulsion for action $y$. That is already suggestive: the tree rediscovers a goal-seeking controller with directional obstacle corrections.
+For the main SAC policy, the saved depth-15 decision tree acts as a near-exact rule-based proxy with $R^2_x = 0.993$ and $R^2_y = 0.991$ on evaluation states. The SHAP and LIME panels in Fig.~\ref{fig:xai_panel} make the same structure explicit: goal displacement dominates attribution, velocity acts as a damping regulator, and obstacle terms appear as more local corrective signals. Together with the near-perfect tree proxy, this stable SHAP ordering argues against the SAC policy being an arbitrary high-frequency map; instead, it behaves like a structured goal-seeking controller with sparse obstacle-triggered corrections.
 
-The SHAP and LIME panels in Fig.~\ref{fig:xai_panel} make the same pattern more explicit. Goal displacement and the UAV state dominate attribution, while individual obstacle coordinates have lower global importance. However, a purely goal-directed explanation is insufficient in closed loop. Obstacle-aware terms are needed to preserve safe behavior, especially in the final stage-4 evaluation. This is one reason why we do not stop at SHAP plots alone.
-
-\begin{figure*}[t]
+\begin{figure*}[!tb]
 \centering
-\includegraphics[width=\textwidth]{figures/explainability_panel.pdf}
-\caption{Post hoc explanations for the main SAC policy. SHAP gives global feature-importance summaries for both action dimensions, while LIME highlights local directional explanations around a representative state. Goal displacement and velocity dominate globally, but local obstacle-aware corrections remain necessary for faithful closed-loop behavior.}
+\includegraphics[width=0.90\textwidth]{figures/explainability_panel.pdf}
+\caption{Post hoc explanations for the main SAC policy using SHAP and LIME. Goal displacement dominates globally, while obstacle-aware corrections remain locally important.}
 \label{fig:xai_panel}
 \end{figure*}
 
 \subsection{Rollout-Aware Equation Distillation}
-Based on these explanations, we fit a family of compact analytical controllers using raw goal displacement, velocity damping, and short-range obstacle repulsion terms. Importantly, we select the final equation by held-out rollout success first, then trace deviation, and only then by one-step $R^2$. This avoids the common failure mode where a surrogate looks excellent on sampled states but diverges quickly in closed loop.
+Based on these explanations, we fit a family of compact analytical controllers using raw goal displacement, velocity damping, and short-range obstacle repulsion terms. Importantly, we select the final equation by rollout success first, then trace deviation, and only then by one-step $R^2$. This avoids the common failure mode where a surrogate looks excellent on sampled states but diverges quickly in closed loop.
 
-The final SAC equation selected at stage 4 is
-\begin{align}
-a_x &= 0.0427 + 0.1442\,\texttt{goal\_dx} - 0.0120\,v_x + 0.4725\,r_x, \\
-a_y &= -0.0624 + 0.1144\,\texttt{goal\_dy} - 0.0071\,v_y + 0.6592\,r_y,
-\end{align}
-where $(r_x, r_y)$ denotes a nearest-obstacle repulsion vector with exponential decay inside a \SI{4.5}{m} threshold. On held-out validation rollouts, this equation preserved 4/4 successes and achieved a mean trajectory deviation of \SI{2.154}{m}. The result is important because the same extraction pipeline does \emph{not} work equally well for all successful policies: DDPG preserves only 2/4 successes and TD3 preserves 0/4 under the same stage-4 seeds.
-
-\section{Trajectory-Level Distillation Results}
-Figure~\ref{fig:stage4_traj} compares the original policies against their final stage-4 SHAP-guided equations. SAC is the clearest success case. Its analytical surrogate tracks the original policy closely enough to preserve all evaluated successes. DDPG is partially distillable but still inconsistent across seeds. TD3 has excellent one-step regression in some settings, yet its rollout behavior diverges badly; it is therefore an example of why closed-loop validation matters.
-
-\begin{figure*}[t]
+\begin{table}[!tb]
+\caption{Numerical comparison of SAC equation families considered during rollout-aware distillation. Reported rollout metrics are measured on the fixed evaluation seeds used to choose the final analytical controller.}
+\label{tab:distill_families}
 \centering
-\includegraphics[width=\textwidth]{figures/stage4_shap_trajectories.png}
-\caption{Stage-4 trajectory overlays for the original policies and their final rollout-selected SHAP equations. SAC remains the strongest case: the distilled analytical controller preserves all four held-out successes. DDPG is partially faithful, while TD3 diverges in closed loop despite successful original rollouts.}
-\label{fig:stage4_traj}
+\footnotesize
+\begin{tabular}{lcccc}
+\toprule
+Equation family & Best $R^2_{\mathrm{full}}$ & Success & Trace dev. (m) & Endpoint dev. (m) \\
+\midrule
+Legacy nominal compact & 0.624 & 4/4 & 2.808 & 0.799 \\
+Compact basis & 0.814 & 0/4 & 7.210 & 6.460 \\
+Contextual basis & 0.814 & 0/4 & 7.289 & 6.723 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:distill_families} shows why the final SAC law is not selected by one-step fit alone. The richer compact and contextual bases achieve much higher $R^2_{\mathrm{full}}$, but both fail in closed loop. The lower-order legacy compact form is therefore retained because it is the only analytical family that preserves all evaluation successes.
+
+Let $(e_x,e_y) = (g_x-x, g_y-y)$ denote goal-relative displacement, let $(v_x,v_y)$ denote the Kalman-filtered planar velocity estimate, and let $(r_x,r_y)$ denote the nearest-obstacle repulsion vector with exponential decay inside a \SI{4.5}{m} threshold.
+
+\noindent\textbf{Final distilled SAC law.}
+\begin{align}\label{eq:sac_eq}
+a_x &= 0.0427 + 0.1442\,e_x - 0.0120\,v_x + 0.4725\,r_x, \\
+a_y &= -0.0624 + 0.1144\,e_y - 0.0071\,v_y + 0.6592\,r_y.
+\end{align}
+In plain language, Eq.~\eqref{eq:sac_eq} says: pull the UAV toward the goal, subtract a fraction of the current velocity to damp overshoot, and add a short-range obstacle-normal correction when nearby clearance collapses. In control terms, it is closest to a damped artificial-potential-field law: proportional attraction toward the goal, viscous damping in velocity, and a local repulsive correction around obstacles. The importance of this form is not just that it matches the learned policy numerically, but that each term maps onto a familiar physical control primitive that can be inspected and manually retuned. On evaluation rollouts, this equation preserved 4/4 successes and achieved a mean trajectory deviation of \SI{2.154}{m}.
+
+\begin{figure*}[!tb]
+\centering
+\includegraphics[width=0.98\textwidth]{figures/surrogate_trace_panel.pdf}
+\caption{Held-out SAC trajectories for the executable surrogates emphasized in the paper: the neural network policy, the depth-15 decision tree, and the final compact SHAP-guided equation. The tree is nearly indistinguishable from the policy, while the compact equation preserves the same successes with slightly larger detours.}
+\label{fig:surrogate_traces}
 \end{figure*}
 
-This gap between task success and distillability is the main empirical message of the paper. A policy can solve the task while still being hard to summarize as a compact control law. In our experiments, SAC appears to learn a smoother and more structured controller than TD3 or DDPG in the same noisy environment.
+Figure~\ref{fig:surrogate_traces} highlights the main positive result more directly than a cross-algorithm failure comparison. For the SAC controller, both the large decision tree and the compact equation remain executable surrogates on the evaluation seeds. The tree is effectively a near-exact replacement, while the equation preserves the same qualitative behavior with a modest increase in path curvature and travel time. Other algorithms did not yield equally faithful compact equations; those weaker surrogate results are summarized numerically in Table~\ref{tab:alg-summary} and revisited briefly in the discussion rather than being made the visual centerpiece of the paper.
 
 \section{Discussion and Limitations}
-The most important lesson from these experiments is that robustness and interpretability are related but not identical objectives. Stage-4 SAC, TD3, and DDPG can all reach perfect evaluation checkpoints, yet only SAC consistently admits a compact analytical surrogate with acceptable closed-loop fidelity. In other words, solving the task is not enough; some policies remain far easier to compress into a control law than others.
+The most important lesson from these experiments is that policy quality and policy distillability are related but not identical. In the shared noisy setting, SAC, TD3, and DDPG can all reach perfect neural-policy checkpoints, yet only SAC consistently yields a compact analytical surrogate with acceptable closed-loop fidelity. Since SAC and TD3 share the same 256-256-256 actor depth in our implementation, this gap is unlikely to be a simple consequence of network size alone; the more relevant difference is the combination of stochastic policy head, twin-critic structure, and regularized training objective shown in Fig.~\ref{fig:arch_blocks}.
 
-That observation also clarifies the scope of the paper. We are not proposing a new RL algorithm, nor are we claiming the first use of Kalman filtering, SHAP, or LIME in navigation. The contribution is the synthesis: a structured noisy benchmark, a controlled state-estimation ablation, and a trajectory-level distillation pipeline that tests whether an interpretable surrogate can actually fly the task. Within that setup, SAC is the clearest positive case and TD3 is the clearest counterexample.
-
-The work nevertheless has important limitations. The environment is custom and two-dimensional, so the conclusions are strongest as a case study rather than as a universal statement about all UAV controllers. The explanation pipeline is still post hoc: it reveals meaningful structure in the learned controller, but it does not guarantee causal sufficiency or formal interpretability. In addition, although the algorithm-comparison plots now use matched stage-4 single-shot runs, the deeper interpretability case study still centers on the SAC controller that produced the most faithful analytical surrogate.
-
-Despite those limitations, the evidence supports one strong conclusion: if the goal is not only to learn a high-performing policy but also to recover a compact analytical surrogate, SAC is the most promising controller family among the methods tested here.
+The scope of the claim is intentionally narrow. We are not proposing a new RL algorithm, nor proving that entropy alone causes distillability. Rather, we show that in a custom but carefully instrumented UAV-navigation benchmark, one successful controller family can be recovered as a compact physical law while others remain harder to compress into the same analytical family. The environment is still planar in motion and the explanation pipeline remains post hoc, so broader claims will require additional tasks, stronger causal ablations, and eventually real-flight validation.
 
 \section{Conclusion}
-We introduced a custom Gymnasium/PyBullet UAV-navigation environment and evaluated all reported policies in a single-shot stage-4 setting that combines noisy observations, Kalman-filtered state estimation, drag, wind, and drifting obstacles. We then analyzed the learned policies with decision trees, LIME, SHAP, vector fields, Q-value heatmaps, and trajectory-level distillation.
+We introduced a custom Gymnasium/PyBullet UAV-navigation environment with planar motion embedded in a 3D simulator and evaluated all reported policies in a single-shot noisy setting that combines corrupted observations, Kalman-filtered state estimation, drag, wind, and drifting obstacles. We then analyzed the learned policies with decision trees, LIME, SHAP, vector fields, Q-value heatmaps, and trajectory-level distillation.
 
-The central finding is that SAC is not just the best-performing policy in our experiments; it is also the most \emph{distillable}. Its final SHAP-guided equation preserves stage-4 rollout success and exposes a compact damped potential-field-like controller that was never hard-coded. This suggests a useful research direction for future work: evaluating learned policies not only by reward and success rate, but also by the fidelity of the simplest analytical controller that can reproduce them.
+The central finding is that SAC is the most \emph{distillable} policy among the controllers tested here and also the most stable performer in the saved noisy runs. Its final SHAP-guided equation preserves rollout success and exposes a compact damped potential-field-like controller that was never hard-coded. This suggests a useful research direction for future work: evaluating learned policies not only by reward and success rate, but also by the fidelity of the simplest analytical controller that can reproduce them.
 
+\FloatBarrier
 \bibliographystyle{splncs04}
 \bibliography{references}
 

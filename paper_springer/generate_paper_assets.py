@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import shutil
 import sys
 from pathlib import Path
@@ -12,7 +13,7 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from matplotlib.patches import Circle, Ellipse, Rectangle
+from matplotlib.patches import Circle, Ellipse, FancyArrowPatch, FancyBboxPatch, Rectangle
 from matplotlib.lines import Line2D
 from matplotlib.ticker import MaxNLocator
 import numpy as np
@@ -28,9 +29,13 @@ from gym_pybullet_drones.envs.constrained_environment import (
     UAV_R,
     _clearance_radius,
 )
+from shap_distillation import compute_action_from_obs, load_result
 
 FIG_DIR = ROOT / "paper_springer" / "figures"
 SAC_STAGE4_MODEL = ROOT / "gym_pybullet_drones/examples/runs/static_nav/sac_modified_static_nav_ablation_single_shot_20260313-042738/best_model/best_model.zip"
+DISTILL_SAC_RUN = ROOT / "gym_pybullet_drones/examples/runs/static_nav/sac_modified_static_nav_sac_30m_curriculum_v5_seed0_20260313-003023"
+DISTILL_SAC_MODEL = DISTILL_SAC_RUN / "best_model" / "best_model.zip"
+DISTILL_SAC_EQUATION_JSON = DISTILL_SAC_RUN / "policy_analysis" / "shap_equation" / "shap_distillation_equation.json"
 
 ALGO_SERIES = {
     "SAC": ROOT / "gym_pybullet_drones/examples/runs/static_nav/sac_modified_static_nav_ablation_single_shot_20260313-042738/paper_metrics.csv",
@@ -87,6 +92,13 @@ OBSTACLE_POS = np.array([spec["position"] for spec in STATIC_OBSTACLE_LAYOUT], d
 OBSTACLE_RADII = np.array([_clearance_radius(spec) for spec in STATIC_OBSTACLE_LAYOUT], dtype=float)
 OBSTACLE_SHAPES = np.array([SHAPE_CODES[spec["shape"]] for spec in STATIC_OBSTACLE_LAYOUT], dtype=float)
 OBSTACLE_SAFETY_RADII = OBSTACLE_RADII + 0.25
+DEEP_TREE_TRAJECTORY_JSON = FIG_DIR / "deep_tree_trajectory_traces.json"
+SEED_COLORS = {
+    42: "#2ca58d",
+    43: "#f18f01",
+    44: "#6c5ce7",
+    45: "#e84393",
+}
 
 
 def smooth_by_timestep(timesteps: np.ndarray, values: np.ndarray, window_timesteps: int) -> np.ndarray:
@@ -341,6 +353,275 @@ def generate_policy_vs_potential_field(out_base: Path) -> None:
     save(fig, out_base)
 
 
+def load_deep_tree_trajectories() -> list[dict[str, object]]:
+    with DEEP_TREE_TRAJECTORY_JSON.open("r", encoding="utf-8") as fh:
+        payload = json.load(fh)
+    return list(payload["trajectories"])
+
+
+def seed_label_offset(seed: int, xy: np.ndarray) -> tuple[float, float]:
+    fixed_offsets = {
+        42: (0.35, 0.45),
+        43: (0.50, -0.35),
+        44: (0.20, -0.95),
+        45: (-0.85, -0.55),
+    }
+    if seed in fixed_offsets:
+        return fixed_offsets[seed]
+    dx = 0.45 if xy[0] < 0.0 else -0.95
+    dy = 0.45 if xy[1] < 0.0 else -0.65
+    return dx, dy
+
+
+def generate_policy_trajectory_traces(out_base: Path) -> None:
+    trajectories = load_deep_tree_trajectories()
+    fig, ax = plt.subplots(figsize=(3.2, 3.05), constrained_layout=True)
+
+    for entry in trajectories:
+        seed = int(entry["seed"])
+        color = SEED_COLORS.get(seed, "#1f77b4")
+        policy = np.asarray(entry["policy"], dtype=float)
+        ax.plot(policy[:, 0], policy[:, 1], color=color, linewidth=1.9, alpha=0.95, zorder=7)
+        ax.scatter([policy[0, 0]], [policy[0, 1]], s=18, color=color, edgecolor="white", linewidth=0.4, zorder=8)
+        dx, dy = seed_label_offset(seed, policy[0])
+        ax.text(
+            policy[0, 0] + dx,
+            policy[0, 1] + dy,
+            str(seed),
+            color=color,
+            fontsize=7,
+            fontweight="bold",
+            ha="left",
+            va="center",
+            zorder=9,
+            bbox={"facecolor": "white", "alpha": 0.75, "edgecolor": "none", "pad": 0.2},
+        )
+
+    draw_obstacles(ax, opaque=False)
+    style_workspace(ax)
+    save(fig, out_base)
+
+
+def generate_deep_tree_trajectory_traces(out_base: Path) -> None:
+    trajectories = load_deep_tree_trajectories()
+    fig, ax = plt.subplots(figsize=(3.45, 3.75), constrained_layout=True)
+
+    for entry in trajectories:
+        seed = int(entry["seed"])
+        color = SEED_COLORS.get(seed, "#1f77b4")
+        policy = np.asarray(entry["policy"], dtype=float)
+        tree = np.asarray(entry["tree"], dtype=float)
+        ax.plot(policy[:, 0], policy[:, 1], color=color, linewidth=2.0, alpha=0.95, zorder=7)
+        ax.plot(tree[:, 0], tree[:, 1], color=color, linewidth=1.8, linestyle="--", alpha=0.95, zorder=7)
+        ax.scatter([policy[0, 0]], [policy[0, 1]], s=20, color=color, edgecolor="white", linewidth=0.4, zorder=8)
+        dx, dy = seed_label_offset(seed, policy[0])
+        ax.text(
+            policy[0, 0] + dx,
+            policy[0, 1] + dy,
+            str(seed),
+            color=color,
+            fontsize=7,
+            fontweight="bold",
+            ha="left",
+            va="center",
+            zorder=9,
+            bbox={"facecolor": "white", "alpha": 0.75, "edgecolor": "none", "pad": 0.2},
+        )
+
+    style_handles = [
+        Line2D([0], [0], color="#222222", linewidth=2.0, linestyle="-", label="SAC policy"),
+        Line2D([0], [0], color="#222222", linewidth=1.8, linestyle="--", label="Depth-15 tree"),
+    ]
+    draw_obstacles(ax, opaque=False)
+    style_workspace(ax)
+    ax.legend(
+        handles=style_handles,
+        loc="upper center",
+        ncol=2,
+        frameon=False,
+        bbox_to_anchor=(0.5, 1.12),
+        handlelength=2.2,
+        columnspacing=1.2,
+        borderaxespad=0.0,
+    )
+    save(fig, out_base)
+
+
+def rollout_shap_equation(seed: int, equation: dict) -> np.ndarray:
+    env = UAV2DAvoidSimple1(render_mode=None, curriculum_stage=4)
+    env.set_curriculum_stage(4)
+    obs, _ = env.reset(seed=seed)
+    positions = [obs[:2].copy()]
+
+    try:
+        done = False
+        while not done:
+            action = compute_action_from_obs(obs, equation)
+            obs, reward, terminated, truncated, info = env.step(action)
+            positions.append(obs[:2].copy())
+            done = terminated or truncated
+    finally:
+        env.close()
+
+    return np.asarray(positions, dtype=np.float32)
+
+
+def plot_seed_label(ax, seed: int, xy: np.ndarray) -> None:
+    color = SEED_COLORS.get(seed, "#1f77b4")
+    dx, dy = seed_label_offset(seed, xy)
+    ax.text(
+        xy[0] + dx,
+        xy[1] + dy,
+        str(seed),
+        color=color,
+        fontsize=7,
+        fontweight="bold",
+        ha="left",
+        va="center",
+        zorder=9,
+        bbox={"facecolor": "white", "alpha": 0.75, "edgecolor": "none", "pad": 0.2},
+    )
+
+
+def generate_surrogate_trace_panel(out_base: Path) -> None:
+    trajectories = load_deep_tree_trajectories()
+    equation = load_result(DISTILL_SAC_EQUATION_JSON)
+    fig, axes = plt.subplots(1, 3, figsize=(7.1, 2.55), constrained_layout=True)
+
+    for ax, title in zip(
+        axes,
+        ("(a) Neural policy", "(b) Depth-15 tree", "(c) Compact equation"),
+    ):
+        draw_obstacles(ax, opaque=False)
+        style_workspace(ax, title)
+
+    for entry in trajectories:
+        seed = int(entry["seed"])
+        color = SEED_COLORS.get(seed, "#1f77b4")
+        policy = np.asarray(entry["policy"], dtype=float)
+        tree = np.asarray(entry["tree"], dtype=float)
+        equation_traj = rollout_shap_equation(seed, equation)
+
+        axes[0].plot(policy[:, 0], policy[:, 1], color=color, linewidth=2.0, alpha=0.95, zorder=7)
+        axes[1].plot(tree[:, 0], tree[:, 1], color=color, linewidth=2.0, alpha=0.95, zorder=7)
+        axes[2].plot(equation_traj[:, 0], equation_traj[:, 1], color=color, linewidth=2.0, alpha=0.95, zorder=7)
+
+        for ax, traj in zip(axes, (policy, tree, equation_traj)):
+            ax.scatter([traj[0, 0]], [traj[0, 1]], s=18, color=color, edgecolor="white", linewidth=0.4, zorder=8)
+
+        plot_seed_label(axes[0], seed, policy[0])
+
+    save(fig, out_base)
+
+
+def draw_block(ax, xy: tuple[float, float], w: float, h: float, text: str, face: str) -> None:
+    box = FancyBboxPatch(
+        xy,
+        w,
+        h,
+        boxstyle="round,pad=0.02,rounding_size=0.02",
+        linewidth=1.0,
+        edgecolor="#304050",
+        facecolor=face,
+    )
+    ax.add_patch(box)
+    ax.text(xy[0] + w / 2.0, xy[1] + h / 2.0, text, ha="center", va="center", fontsize=7.3)
+
+
+def draw_arrow(ax, start: tuple[float, float], end: tuple[float, float]) -> None:
+    ax.add_patch(
+        FancyArrowPatch(
+            start,
+            end,
+            arrowstyle="-|>",
+            mutation_scale=10,
+            linewidth=1.0,
+            color="#405060",
+        )
+    )
+
+
+def draw_architecture_panel(
+    ax,
+    title: str,
+    actor_text: str,
+    head_text: str,
+    critic_text: str,
+    note_text: str,
+    twin_critics: bool = False,
+) -> None:
+    ax.set_xlim(0.0, 1.0)
+    ax.set_ylim(0.0, 1.0)
+    ax.axis("off")
+    ax.set_title(title, fontsize=9.2, pad=3)
+
+    draw_block(ax, (0.03, 0.68), 0.18, 0.17, "39-d\nobservation", "#e9f2ff")
+    draw_block(ax, (0.30, 0.68), 0.22, 0.17, actor_text, "#fff3db")
+    draw_block(ax, (0.62, 0.68), 0.20, 0.17, head_text, "#e8f7e8")
+    draw_block(ax, (0.62, 0.14), 0.20, 0.16, critic_text, "#f6e8ff")
+    if twin_critics:
+        draw_block(ax, (0.62, 0.36), 0.20, 0.16, "Second critic", "#f6e8ff")
+
+    draw_arrow(ax, (0.21, 0.765), (0.30, 0.765))
+    draw_arrow(ax, (0.52, 0.765), (0.62, 0.765))
+    draw_arrow(ax, (0.43, 0.68), (0.68, 0.30 if not twin_critics else 0.52))
+    draw_arrow(ax, (0.72, 0.68), (0.72, 0.30 if not twin_critics else 0.52))
+    if twin_critics:
+        draw_arrow(ax, (0.72, 0.46), (0.72, 0.30))
+
+    ax.text(
+        0.03,
+        0.04,
+        note_text,
+        ha="left",
+        va="bottom",
+        fontsize=6.8,
+        wrap=True,
+    )
+
+
+def generate_algorithm_architecture_panel(out_base: Path) -> None:
+    fig, axes = plt.subplots(2, 2, figsize=(7.1, 4.05), constrained_layout=True)
+    axes = axes.ravel()
+
+    draw_architecture_panel(
+        axes[0],
+        "PPO",
+        "Actor MLP\n512-256-256",
+        "Gaussian policy\n(on-policy)",
+        "Value MLP\n512-256-256",
+        "Separate policy and value streams; no replay buffer.",
+    )
+    draw_architecture_panel(
+        axes[1],
+        "DDPG",
+        "Actor MLP\n256-256",
+        "Deterministic\naction",
+        "Single Q critic",
+        "Shallowest actor among the tested off-policy controllers.",
+    )
+    draw_architecture_panel(
+        axes[2],
+        "TD3",
+        "Actor MLP\n256-256-256",
+        "Deterministic\naction",
+        "Twin Q critics",
+        "Same actor depth as SAC, but deterministic head and delayed policy updates.",
+        twin_critics=True,
+    )
+    draw_architecture_panel(
+        axes[3],
+        "SAC",
+        "Actor MLP\n256-256-256",
+        "Gaussian mean\n+ log std",
+        "Twin Q critics",
+        "Same backbone depth as TD3, but stochastic actor and entropy-regularised objective.",
+        twin_critics=True,
+    )
+
+    save(fig, out_base)
+
+
 def plot_two_panel(series_map: dict[str, Path], out_base: Path, max_timesteps: int = 1_050_000, window_timesteps: int = 300_000) -> None:
     loaded = load_series(series_map, max_timesteps=max_timesteps)
     fig, axes = plt.subplots(1, 2, figsize=(7.1, 3.0), constrained_layout=True)
@@ -422,8 +703,12 @@ def main() -> None:
     plot_two_panel(ALGO_SERIES, FIG_DIR / "algorithm_comparison")
     plot_two_panel(KALMAN_SERIES, FIG_DIR / "kalman_ablation")
     copy_static_figures()
+    generate_algorithm_architecture_panel(FIG_DIR / "algorithm_architectures")
     generate_action_vector_field(FIG_DIR / "action_vector_field")
     generate_policy_vs_potential_field(FIG_DIR / "policy_vs_potential_field")
+    generate_policy_trajectory_traces(FIG_DIR / "trajectory_traces")
+    generate_deep_tree_trajectory_traces(FIG_DIR / "deep_tree_trajectory_traces")
+    generate_surrogate_trace_panel(FIG_DIR / "surrogate_trace_panel")
     build_panel(
         FIG_DIR / "interpretability_panel",
         [

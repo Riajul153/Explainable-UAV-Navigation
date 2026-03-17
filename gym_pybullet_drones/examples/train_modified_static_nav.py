@@ -307,6 +307,15 @@ def parse_args() -> argparse.Namespace:
         default=3,
         help="Consecutive regressed evaluations tolerated after reaching perfect success.",
     )
+    parser.add_argument(
+        "--success-hold-patience",
+        type=int,
+        default=2,
+        help=(
+            "Stop early after this many consecutive final-stage evaluations meet or exceed "
+            "the success threshold. Only used when --early-stop-after-perfect-success is set."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -653,6 +662,7 @@ class PaperEvalCallback(BaseCallback):
         early_stop_after_perfect_success: bool = False,
         perfect_success_threshold: float = 1.0,
         success_drop_patience: int = 3,
+        success_hold_patience: int = 2,
     ):
         super().__init__(verbose=1)
         self.eval_env = eval_env
@@ -678,8 +688,10 @@ class PaperEvalCallback(BaseCallback):
         self.early_stop_after_perfect_success = early_stop_after_perfect_success
         self.perfect_success_threshold = perfect_success_threshold
         self.success_drop_patience = success_drop_patience
+        self.success_hold_patience = success_hold_patience
         self._perfect_success_seen = False
         self._success_regression_counter = 0
+        self._success_hold_counter = 0
 
     def _on_training_start(self) -> None:
         if not self.csv_path.exists():
@@ -809,6 +821,27 @@ class PaperEvalCallback(BaseCallback):
         if (
             self.early_stop_after_perfect_success
             and self.curriculum_stage >= self.max_curriculum_stages
+        ):
+            sustained_success = metrics["success_rate"] >= self.perfect_success_threshold
+            if sustained_success:
+                self._perfect_success_seen = True
+                self._success_hold_counter += 1
+            else:
+                self._success_hold_counter = 0
+
+            if self.success_hold_patience > 0 and self._success_hold_counter >= self.success_hold_patience:
+                print(
+                    f"[early-stop] deterministic evaluation reached "
+                    f"{100.0 * self.perfect_success_threshold:.1f}%+ success for "
+                    f"{self._success_hold_counter} consecutive checks at stage "
+                    f"{self.curriculum_stage}. Stopping training to keep the "
+                    f"best success-first checkpoint."
+                )
+                return False
+
+        if (
+            self.early_stop_after_perfect_success
+            and self.curriculum_stage >= self.max_curriculum_stages
             and self._perfect_success_seen
         ):
             regressed = metrics["success_rate"] < self.perfect_success_threshold
@@ -841,6 +874,7 @@ class PaperEvalCallback(BaseCallback):
                 self.best_mean_reward = -np.inf
                 self._perfect_success_seen = False
                 self._success_regression_counter = 0
+                self._success_hold_counter = 0
                 # Update all environments
                 train_env = self.model.get_env()
                 train_env.env_method("set_curriculum_stage", self.curriculum_stage)
@@ -875,7 +909,10 @@ def build_callbacks(
         )
 
     if args.eval_freq > 0:
-        eval_freq = max(args.eval_freq // args.n_envs, 1)
+        # PaperEvalCallback gates on self.num_timesteps, which already counts
+        # total environment transitions across all vectorized workers.
+        # Dividing by n_envs makes evaluation fire too often.
+        eval_freq = max(args.eval_freq, 1)
         callbacks.append(
             PaperEvalCallback(
                 eval_env=eval_env,
@@ -889,6 +926,7 @@ def build_callbacks(
                 early_stop_after_perfect_success=args.early_stop_after_perfect_success,
                 perfect_success_threshold=args.perfect_success_threshold,
                 success_drop_patience=args.success_drop_patience,
+                success_hold_patience=args.success_hold_patience,
             )
         )
 
@@ -989,6 +1027,11 @@ def train_one_algorithm(
     validate_algorithm_args(algo, args)
     if algo == "a2c":
         print("[a2c] note: --batch-size is ignored by A2C.")
+    if algo in {"td3", "ddpg"} and args.action_noise_std > 0.0:
+        print(
+            f"[{algo}] note: SB3 rollout/success_rate is measured on noisy training episodes. "
+            "Use [paper-eval] as the deterministic model-selection signal."
+        )
 
     checkpoint_path = latest_checkpoint_path(run_dir, algo) if resume else None
     vecnormalize_path = None
