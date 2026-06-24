@@ -9,6 +9,7 @@ This repo contains only the scripts needed to:
 - run TD3/DDPG/PPO baseline training with Optuna
 - evaluate saved models
 - run SHAP/LIME/decision-tree based policy analysis and equation extraction
+- compare the explainability-guided analytical controller against standard distillation baselines (VIPER, behavioural cloning, DAgger) under closed-loop rollout
 
 It does **not** include:
 
@@ -52,6 +53,8 @@ Policy analysis and distillation:
 - `extract_shap_equation.py`
 - `compare_shap_distilled_trajectories.py`
 - `optimize_shap_equation.py`
+- `extract_tree_policy.py` — clone the policy into a decision tree (VIPER-style policy-extraction tree)
+- `run_distillation_baselines.py` — compare the analytical controller against VIPER / behavioural cloning / DAgger in closed loop
 - `sb3_model_utils.py`
 
 ## Setup
@@ -113,4 +116,17 @@ python run_policy_analysis_suite.py ^
   --out-dir outputs\sac_analysis ^
   --curriculum-stage 4
 ```
+
+Compare the analytical controller against distillation baselines (VIPER, BC, DAgger):
+
+```bash
+python run_distillation_baselines.py --teacher SAC_2D
+```
+
+Set the teacher checkpoint paths in the `TEACHERS` table at the top of
+`run_distillation_baselines.py` to your trained models first. Each baseline is
+trained from the teacher and rolled out in closed loop; the script reports
+success, trajectory deviation, model size, and interpretability per method. The
+analytical-controller row additionally needs the distillation `result.json`
+produced by the analysis suite (it is skipped if absent).
 
